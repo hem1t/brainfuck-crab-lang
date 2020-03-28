@@ -1,45 +1,58 @@
-#![allow(non_camel_case_types)]
 use std::io;
 use std::io::prelude::*;
 
+const MEMORY_SIZE: usize = 1000;
+
 fn main() {
-    println!("It's a BF compiler, type quit and ENTER to exit.");
+    println!("It's a BF Interpreter, type quit and ENTER to exit.");
     loop {
-        print!(">>");
-        io::stdout().flush();
+        print!("||}");
+        io::stdout().flush().expect("\n");
+        // taking input
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("something went wrong.");
         if input.trim() == "quit" {
+            // If the input is "quit", the program will quit.
             std::process::exit(0);
         }
-        let mut compile = lexer::new();
-        compile.scan(input);
-        compile.optimize();
-        compile.evaluate();
+        let mut compiler = Lexer::new();
+        compiler.scan(input);
+        compiler.optimize();
+        compiler.evaluate();
     }
 }
 
-enum token {
-    inc(usize),    // > Increment data pointer
-    dec(usize),    // < Decrement data pointer
-    plus(u8),      // + data plus one
-    minus(u8),     // - data minus one
-    point,         // . output the data
-    comma,         // , take input of data of a byte.
-    L_square,      // [ start loop from ']'
-    R_square,      // ] end if data is zero
+enum Token {
+    /// > Increment data pointer
+    Inc(usize),    
+    /// < Decrement data pointer
+    Dec(usize),    
+    /// + data Plus one
+    Plus(u8),
+    /// - data Minus one
+    Minus(u8),     
+    /// . output the data
+    PutChar,
+    /// , take input of data of a byte.         
+    GetChar,
+    /// [ start loop from ']'
+    LSquare,      
+    /// ] end if data is zero
+    RSquare,      
 }
 
-struct lexer {
-    tokens: Vec<token>,
-    counter: Vec<u8>,
+struct Lexer {
+    /// This will store the tokens
+    tokens: Vec<Token>,
+    /// Memory to store the 
+    memory: Vec<u8>,
 }
 
-impl lexer {
-    fn new() -> lexer {
-        lexer {
+impl Lexer {
+    fn new() -> Lexer {
+        Lexer {
             tokens: Vec::new(),
-            counter: [0; 1000].to_vec(),
+            memory: [0; MEMORY_SIZE].to_vec(),
         }
     }
 
@@ -47,28 +60,28 @@ impl lexer {
         for symbol in code.chars() {
             match symbol {
                 '>' => {
-                   &self.tokens.push(token::inc(1));
+                   &self.tokens.push(Token::Inc(1));
                 },
                 '<' => {
-                   &self.tokens.push(token::dec(1));
+                   &self.tokens.push(Token::Dec(1));
                 },
                 '+' => {
-                   &self.tokens.push(token::plus(1));
+                   &self.tokens.push(Token::Plus(1));
                 },
                 '-' => {
-                   &self.tokens.push(token::minus(1));
+                   &self.tokens.push(Token::Minus(1));
                 },
                 '.' => {
-                   &self.tokens.push(token::point);
+                   &self.tokens.push(Token::PutChar);
                 },
                 ',' => {
-                   &self.tokens.push(token::comma);
+                   &self.tokens.push(Token::GetChar);
                 },
                 '[' => {
-                   &self.tokens.push(token::L_square);
+                   &self.tokens.push(Token::LSquare);
                 },
                 ']' => {
-                   &self.tokens.push(token::R_square);
+                   &self.tokens.push(Token::RSquare);
                 },
                  _ => {}
             }
@@ -80,11 +93,10 @@ impl lexer {
     }
 
     fn evaluate(&mut self) {
-        let mut counter_index: usize = 0;
+        let mut memory_index: usize = 0;
         let mut lexeme_index: usize = 0;
         let lexeme_len = self.tokens.len();
         let mut loops_jmp_points = Vec::new();
-        let mut safe_count = 0;
 
         loop {
             if lexeme_len == 0 {
@@ -92,36 +104,36 @@ impl lexer {
             }
             let lexem = &self.tokens[lexeme_index];
             match lexem {
-                token::inc(i) => {
-                    counter_index += i;
+                Token::Inc(i) => {
+                    memory_index += i;
                 },
-                token::dec(i) => {
-                    counter_index -= i;
+                Token::Dec(i) => {
+                    memory_index -= i;
                 },
-                token::plus(i) => {
-                    if self.counter[counter_index] < 255 {
-                        self.counter[counter_index] += i;
+                Token::Plus(i) => {
+                    if self.memory[memory_index] < 255 {
+                        self.memory[memory_index] += i;
                     }
                 },
-                token::minus(i) => {
-                    if self.counter[counter_index] > 0 {
-                        self.counter[counter_index] -= i;
+                Token::Minus(i) => {
+                    if self.memory[memory_index] > 0 {
+                        self.memory[memory_index] -= i;
                     }
                 },
-                token::point => {
-                    print!("\n{}", self.counter[counter_index] as char);
+                Token::PutChar => {
+                    print!("\n{}", self.memory[memory_index] as char);
                 },
-                token::comma => {
+                Token::GetChar => {
                     let mut chr = String::new();
                     io::stdin().read_line(&mut chr).expect("something");
                     print!("chr {}", chr);
-                    self.counter[counter_index] = chr.chars().next().unwrap() as u8;
+                    self.memory[memory_index] = chr.chars().next().unwrap() as u8;
                 },
-                token::L_square => {
-                    loops_jmp_points.push(lexeme_index);
+                Token::LSquare => {
+                    loops_jmp_points.push(lexeme_index + 1);
                 },
-                token::R_square => {
-                    if self.counter[counter_index] != 0 {
+                Token::RSquare => {
+                    if self.memory[memory_index] != 0 {
                         let temp_index = loops_jmp_points.last();
                         if temp_index.is_none() {
                             println!("syntax error: loop never started but ended.");
@@ -134,7 +146,6 @@ impl lexer {
             if lexeme_index == lexeme_len {
                 break;
             }
-        } 
-        print!("counter: {:?}", self.counter.get(0..5));
+        }
     }
 }
