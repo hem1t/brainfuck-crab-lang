@@ -125,7 +125,7 @@ impl Lexer {
                     }
                 },
                 Token::PutChar => {
-                    println!("{}", self.memory[memory_index] as char);
+                    print!("{}", self.memory[memory_index] as char);
                     let mut stdout = io::stdout();
                     stdout.flush();
                 },
