@@ -1,12 +1,13 @@
 use std::io;
 use std::io::prelude::*;
+mod interpreter;
 
 const MEMORY_SIZE: usize = 1000;
 
 fn main() {
     println!("It's a BF Interpreter, type quit and ENTER to exit.");
     loop {
-        print!("||}");
+        print!("||}}");
         io::stdout().flush().expect("\n");
         // taking input
         let mut input = String::new();
@@ -59,30 +60,14 @@ impl Lexer {
     fn scan(&mut self, code: String) {
         for symbol in code.chars() {
             match symbol {
-                '>' => {
-                   &self.tokens.push(Token::Inc(1));
-                },
-                '<' => {
-                   &self.tokens.push(Token::Dec(1));
-                },
-                '+' => {
-                   &self.tokens.push(Token::Plus(1));
-                },
-                '-' => {
-                   &self.tokens.push(Token::Minus(1));
-                },
-                '.' => {
-                   &self.tokens.push(Token::PutChar);
-                },
-                ',' => {
-                   &self.tokens.push(Token::GetChar);
-                },
-                '[' => {
-                   &self.tokens.push(Token::LSquare);
-                },
-                ']' => {
-                   &self.tokens.push(Token::RSquare);
-                },
+                '>' => &self.tokens.push(Token::Inc(1)),
+                '<' => &self.tokens.push(Token::Dec(1)),
+                '+' => &self.tokens.push(Token::Plus(1)),
+                '-' => &self.tokens.push(Token::Minus(1)),
+                '.' => &self.tokens.push(Token::PutChar),
+                ',' => &self.tokens.push(Token::GetChar),
+                '[' => &self.tokens.push(Token::LSquare),
+                ']' => self.tokens.push(Token::RSquare),
                  _ => {}
             }
         }
@@ -98,18 +83,14 @@ impl Lexer {
         let lexeme_len = self.tokens.len();
         let mut loops_jmp_points = Vec::new();
 
-        loop {
+        while lexeme_index != lexeme_len {
             if lexeme_len == 0 {
                 break;
             }
             let lexem = &self.tokens[lexeme_index];
             match lexem {
-                Token::Inc(i) => {
-                    memory_index += i;
-                },
-                Token::Dec(i) => {
-                    memory_index -= i;
-                },
+                Token::Inc(i) => memory_index += i,
+                Token::Dec(i) => memory_index -= i,
                 Token::Plus(i) => {
                     if self.memory[memory_index] < 255 {
                         self.memory[memory_index] += i;
@@ -139,13 +120,12 @@ impl Lexer {
                             println!("syntax error: loop never started but ended.");
                         }
                         lexeme_index = *temp_index.unwrap();
+                        continue;
                     }
                 }
             }
+            // print!("lexeme_index = {}", lexeme_index);
             lexeme_index += 1;
-            if lexeme_index == lexeme_len {
-                break;
-            }
         }
     }
 }
