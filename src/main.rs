@@ -7,7 +7,7 @@ fn main() {
     let mut stdout = io::stdout();
     println!("It's a BF Interpreter, type quit and ENTER to exit.");
     print!(">>");
-    stdout.flush();
+    stdout.flush().unwrap();
     // taking input
     let input = io::stdin();
     for line in input.lock().lines() {
@@ -20,8 +20,8 @@ fn main() {
         compiler.tokenize(code.trim().to_string());
         compiler.optimize();
         compiler.evaluate();
-        print!(">>");
-        stdout.flush();
+        print!("\n>>");
+        stdout.flush().unwrap();
     }
 }
 
@@ -127,10 +127,10 @@ impl Lexer {
                 Token::PutChar => {
                     print!("{}", self.memory[memory_index] as char);
                     let mut stdout = io::stdout();
-                    stdout.flush();
+                    stdout.flush().unwrap();
                 },
                 Token::GetChar => {
-                    let mut chr = unsafe { libc::getchar() };
+                    let chr = unsafe { libc::getchar() };
                     self.memory[memory_index] = (chr & 0xff) as u8;
                 },
                 Token::LSquare => {
