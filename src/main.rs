@@ -1,27 +1,34 @@
-use std::io;
-use std::io::prelude::*;
+use std::io::{self, BufRead, Write};
+use libc;
 
 const MEMORY_SIZE: usize = 1000;
 
 fn main() {
+    let mut stdout = io::stdout();
     println!("It's a BF Interpreter, type quit and ENTER to exit.");
-    loop {
-        print!("||}}");
-        io::stdout().flush().expect("\n");
-        // taking input
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("something went wrong.");
-        if input.trim() == "quit" {
+    print!(">>");
+    stdout.flush();
+    // taking input
+    let input = io::stdin();
+    for line in input.lock().lines() {
+        let code = line.unwrap();
+        if code.trim() == "quit" {
             // If the input is "quit", the program will quit.
-            std::process::exit(0);
+            return;
         }
         let mut compiler = Lexer::new();
-        compiler.scan(input);
+        compiler.tokenize(code.trim().to_string());
         compiler.optimize();
         compiler.evaluate();
+        print!(">>");
+        stdout.flush();
     }
 }
 
+/// # Token
+///
+/// Contains all tokens related to BrainFuck language.
+///
 enum Token {
     /// > Increment data pointer
     Inc(usize),    
@@ -41,6 +48,12 @@ enum Token {
     RSquare,      
 }
 
+/// # Lexer
+///
+/// `Lexer` will take the code and tokenize it, and evaluate it.
+///
+/// 
+///
 struct Lexer {
     /// This will store the tokens
     tokens: Vec<Token>,
@@ -56,19 +69,22 @@ impl Lexer {
         }
     }
 
-    fn scan(&mut self, code: String) {
+///
+/// Tokenizes the given code, and will store in self.tokens
+///
+    fn tokenize(&mut self, code: String) {
         for symbol in code.chars() {
             match symbol {
-                '>' => &self.tokens.push(Token::Inc(1)),
-                '<' => &self.tokens.push(Token::Dec(1)),
-                '+' => &self.tokens.push(Token::Plus(1)),
-                '-' => &self.tokens.push(Token::Minus(1)),
-                '.' => &self.tokens.push(Token::PutChar),
-                ',' => &self.tokens.push(Token::GetChar),
-                '[' => &self.tokens.push(Token::LSquare),
-                ']' => &self.tokens.push(Token::RSquare),
-                 _ => &{}
-            };
+                '>' => self.tokens.push(Token::Inc(1)),
+                '<' => self.tokens.push(Token::Dec(1)),
+                '+' => self.tokens.push(Token::Plus(1)),
+                '-' => self.tokens.push(Token::Minus(1)),
+                '.' => self.tokens.push(Token::PutChar),
+                ',' => self.tokens.push(Token::GetChar),
+                '[' => self.tokens.push(Token::LSquare),
+                ']' => self.tokens.push(Token::RSquare),
+                 _ => {}
+            }
         }
     }
 
@@ -88,8 +104,16 @@ impl Lexer {
             }
             let lexem = &self.tokens[lexeme_index];
             match lexem {
-                Token::Inc(i) => memory_index += i,
-                Token::Dec(i) => memory_index -= i,
+                Token::Inc(i) => {
+                    if memory_index < MEMORY_SIZE {
+                        memory_index += i
+                    }
+                },
+                Token::Dec(i) => {
+                    if memory_index > 0 {
+                        memory_index -= i;
+                    }
+                },
                 Token::Plus(i) => {
                     if self.memory[memory_index] < 255 {
                         self.memory[memory_index] += i;
@@ -101,13 +125,13 @@ impl Lexer {
                     }
                 },
                 Token::PutChar => {
-                    print!("\n{}", self.memory[memory_index] as char);
+                    println!("{}", self.memory[memory_index] as char);
+                    let mut stdout = io::stdout();
+                    stdout.flush();
                 },
                 Token::GetChar => {
-                    let mut chr = String::new();
-                    io::stdin().read_line(&mut chr).expect("something");
-                    print!("chr {}", chr);
-                    self.memory[memory_index] = chr.chars().next().unwrap() as u8;
+                    let mut chr = unsafe { libc::getchar() };
+                    self.memory[memory_index] = (chr & 0xff) as u8;
                 },
                 Token::LSquare => {
                     loops_jmp_points.push(lexeme_index + 1);
@@ -117,6 +141,7 @@ impl Lexer {
                         let temp_index = loops_jmp_points.last();
                         if temp_index.is_none() {
                             println!("syntax error: loop never started but ended.");
+                            break;
                         }
                         lexeme_index = *temp_index.unwrap();
                         continue;
