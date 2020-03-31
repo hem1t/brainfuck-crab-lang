@@ -97,7 +97,18 @@ impl Lexer {
         }
     }
 
-    // fn optimize(&self) {}
+    fn jmp_to_corresponding_end_of_the_loop(&mut self) {
+        let mut depth = 1;
+        while depth > 0 {
+            self.ip += 1;
+            match self.tokens[self.ip] {
+                Token::LSquare => depth += 1,
+                Token::RSquare => depth -= 1,
+                _ => (),
+            }
+        }
+    }
+
     fn jump_to_starting_of_the_loop(&mut self) {
         let jmp_addr = self.labels.last();
         if jmp_addr.is_some() {
@@ -145,8 +156,12 @@ impl Lexer {
                     self.memory[memory_index] = (chr & 0xff) as u8;
                 },
                 Token::LSquare => {
-                    // ip + 1 so, it would loop jmp to '[' + 1
-                    self.labels.push( Label(self.ip + 1));
+                    if self.memory[memory_index] == 0 {
+                        self.jmp_to_corresponding_end_of_the_loop();
+                    } else {
+                        // ip + 1 so, it would loop jmp to '[' + 1
+                        self.labels.push( Label(self.ip + 1));
+                    }
                 },
                 Token::RSquare => {
                     if self.memory[memory_index] != 0 {
