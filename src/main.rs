@@ -105,8 +105,10 @@ impl Lexer {
             let lexem = &self.tokens[lexeme_index];
             match lexem {
                 Token::Inc(i) => {
-                    if memory_index < MEMORY_SIZE {
+                    if memory_index < 10 {
                         memory_index += i
+                    } else {
+                        return;
                     }
                 },
                 Token::Dec(i) => {
@@ -134,7 +136,7 @@ impl Lexer {
                     self.memory[memory_index] = (chr & 0xff) as u8;
                 },
                 Token::LSquare => {
-                    loops_jmp_points.push(lexeme_index + 1);
+                    loops_jmp_points.push(lexeme_index+1);
                 },
                 Token::RSquare => {
                     if self.memory[memory_index] != 0 {
@@ -145,6 +147,8 @@ impl Lexer {
                         }
                         lexeme_index = *temp_index.unwrap();
                         continue;
+                    } else {
+                        loops_jmp_points.pop();
                     }
                 }
             }
