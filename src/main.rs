@@ -1,6 +1,5 @@
 use std::io;
 use std::io::prelude::*;
-mod interpreter;
 
 const MEMORY_SIZE: usize = 1000;
 
@@ -67,9 +66,9 @@ impl Lexer {
                 '.' => &self.tokens.push(Token::PutChar),
                 ',' => &self.tokens.push(Token::GetChar),
                 '[' => &self.tokens.push(Token::LSquare),
-                ']' => self.tokens.push(Token::RSquare),
-                 _ => {}
-            }
+                ']' => &self.tokens.push(Token::RSquare),
+                 _ => &{}
+            };
         }
     }
 
