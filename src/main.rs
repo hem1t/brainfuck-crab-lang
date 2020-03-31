@@ -18,7 +18,7 @@ fn main() {
         }
         let mut compiler = Lexer::new();
         compiler.tokenize(code.trim().to_string());
-        compiler.optimize();
+        // compiler.optimize();
         compiler.evaluate();
         print!("\n>>");
         stdout.flush().unwrap();
@@ -47,7 +47,10 @@ enum Token {
     /// ] end if data is zero
     RSquare,      
 }
-
+///
+///  Label to store the address
+///
+struct  Label(usize);
 /// # Lexer
 ///
 /// `Lexer` will take the code and tokenize it, and evaluate it.
@@ -59,6 +62,10 @@ struct Lexer {
     tokens: Vec<Token>,
     /// Memory to store the 
     memory: Vec<u8>,
+    /// Instruction Pointer
+    ip: usize,
+    /// Labels {stores start + 1 address for every ']'(End of the loop)}
+    labels: Vec< Label>,
 }
 
 impl Lexer {
@@ -66,6 +73,8 @@ impl Lexer {
         Lexer {
             tokens: Vec::new(),
             memory: [0; MEMORY_SIZE].to_vec(),
+            ip: 0,
+            labels: Vec::new(),
         }
     }
 
@@ -88,27 +97,27 @@ impl Lexer {
         }
     }
 
-    fn optimize(&self) {
-
+    // fn optimize(&self) {}
+    fn jump_to_starting_of_the_loop(&mut self) {
+        let jmp_addr = self.labels.last();
+        if jmp_addr.is_some() {
+            self.ip = jmp_addr.unwrap().0;
+        } // else ignore it. and think ']' as a comment.
     }
 
     fn evaluate(&mut self) {
         let mut memory_index: usize = 0;
-        let mut lexeme_index: usize = 0;
-        let lexeme_len = self.tokens.len();
-        let mut loops_jmp_points = Vec::new();
+        let tokens_len = self.tokens.len();
 
-        while lexeme_index != lexeme_len {
-            if lexeme_len == 0 {
+        while self.ip != tokens_len {
+            if tokens_len == 0 {
                 break;
             }
-            let lexem = &self.tokens[lexeme_index];
+            let lexem = &self.tokens[self.ip];
             match lexem {
                 Token::Inc(i) => {
-                    if memory_index < 10 {
+                    if memory_index < MEMORY_SIZE {
                         memory_index += i
-                    } else {
-                        return;
                     }
                 },
                 Token::Dec(i) => {
@@ -136,24 +145,21 @@ impl Lexer {
                     self.memory[memory_index] = (chr & 0xff) as u8;
                 },
                 Token::LSquare => {
-                    loops_jmp_points.push(lexeme_index+1);
+                    // ip + 1 so, it would loop jmp to '[' + 1
+                    self.labels.push( Label(self.ip + 1));
                 },
                 Token::RSquare => {
                     if self.memory[memory_index] != 0 {
-                        let temp_index = loops_jmp_points.last();
-                        if temp_index.is_none() {
-                            println!("syntax error: loop never started but ended.");
-                            break;
-                        }
-                        lexeme_index = *temp_index.unwrap();
+                        self.jump_to_starting_of_the_loop();
                         continue;
                     } else {
-                        loops_jmp_points.pop();
+                        // pop out start  Label which was currently executing.
+                        self.labels.pop();
                     }
                 }
             }
             // print!("lexeme_index = {}", lexeme_index);
-            lexeme_index += 1;
+            self.ip += 1;
         }
     }
 }
